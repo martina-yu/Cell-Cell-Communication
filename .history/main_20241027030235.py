@@ -57,6 +57,9 @@ ray.init()
 set_seed(2024)
 
 # Base file path
+results_df_path = '/home/zy343/CellCommu/tmp_code'
+ray_result_path = '/home/zy343/ray_results'
+file_path = '/home/zy343/CellCommu/tmp_code/rGAT_yes_epoch_yes_CV'
 
 # Define constants
 brain_data = 'left'
@@ -64,7 +67,7 @@ select_family = 'Neurotrophins'
 
 for radius_threshold in range(2400, 3501, 100):
     # Update TrainGAT_path for the current radius_threshold
-    TrainGAT_path = f'/home/ /CellCommu/tmp_code/processed_for_CV/Radius_{radius_threshold}_{select_family}_ligand_target_{brain_data}.data'
+    TrainGAT_path = f'/home/zy343/CellCommu/tmp_code/processed_for_CV/Radius_{radius_threshold}_{select_family}_ligand_target_{brain_data}.data'
     exp_name = f"exp_{select_family}_{brain_data}_radius_{radius_threshold}"
     fold_results = []
     results_dfs = []
@@ -157,7 +160,7 @@ for radius_threshold in range(2400, 3501, 100):
     #####  TESTING  ####
     #####  TESTING: Save the best val loss to csv file ###
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    data = torch.load(f'/home/ /CellCommu/tmp_code/processed_for_CV/Radius_{radius_threshold}_{select_family}_ligand_target_{brain_data}.data').to(device)
+    data = torch.load(f'/home/zy343/CellCommu/tmp_code/processed_for_CV/Radius_{radius_threshold}_{select_family}_ligand_target_{brain_data}.data').to(device)
     
     best_params = torch.load(f'{file_path}/Radius_{radius_threshold}_{select_family}_{brain_data}_best_params_{best_fold}.data')
     
