@@ -159,3 +159,26 @@ def test_model(best_model, data, device):
         test_loss = F.mse_loss(out[data.test_mask], data.y[data.test_mask])
     return test_loss.item()
 
+
+def calculate_sparsity(data):
+
+    if isinstance(data, torch.Tensor):
+        data = data.cpu().numpy()
+
+    num_zeros = np.sum(data == 0)
+    total_elements = data.size
+    sparsity = num_zeros / total_elements
+    density = 1 - sparsity
+    l0_norm = np.sum(data != 0)
+
+    if l0_norm > 0:
+        mean_non_zero = np.mean(data[data != 0])
+    else:
+        mean_non_zero = 0
+
+    return {
+        "Sparsity": sparsity,
+        "Density": density,
+        "L0 Norm": l0_norm,
+        "Mean of Non-Zero Elements": mean_non_zero
+    }
