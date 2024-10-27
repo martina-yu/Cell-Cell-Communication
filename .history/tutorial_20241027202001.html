@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>rGAT Model Documentation</title>
+    <script type="text/javascript" id="MathJax-script" async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
+    <style>
+        /* Code block styling */
+        pre code {
+            display: block;
+            padding: 10px;
+            background-color: #f5f5f5;
+            color: #333;
+            font-size: 14px;
+            line-height: 1.5;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        /* Python keyword styling */
+        .keyword { color: #00008b; font-weight: bold; }
+        .builtin { color: #008080; }
+        .number { color: #b22222; }
+        .comment { color: #6a9955; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<h2>rGAT Model:</h2>
+<hr>
+
+<ul>
+    <pre><code>radius_threshold</code>
+    <code>interval</code>: the interval of each radius
+    code>brain_data</code>
+    <code>select_family</code>
+    <strong>Other hyperparameters</strong>: <code>my_hidden_channels</code>, <code>my_heads</code>,<code>my_dropout</code>,<code>my_lr</code>,<code>num_epochs</code></pre>
+    <li>The graph attentional operator from the <a href="https://arxiv.org/abs/1710.10903">"Graph Attention Networks"</a></li>
+</ul>
+
+<p>$$
+        \mathbf{x}^{\prime}_i = \alpha_{i,i}\mathbf{\Theta}_{s}\mathbf{x}_{i} +
+        \sum_{j \in \mathcal{N}(i)}
+        \alpha_{i,j}\mathbf{\Theta}_{t}\mathbf{x}_{j},
+$$</p>
+
+<p>$$
+        \alpha_{i,j} =
+        \frac{
+        \exp\left(\mathrm{LeakyReLU}\left(
+        \mathbf{a}^{\top}_{s} \mathbf{\Theta}_{s}\mathbf{x}_i
+        + \mathbf{a}^{\top}_{t} \mathbf{\Theta}_{t}\mathbf{x}_j
+        \right)\right)}
+        {\sum_{k \in \mathcal{N}(i) \cup \{ i \}}
+        \exp\left(\mathrm{LeakyReLU}\left(
+        \mathbf{a}^{\top}_{s} \mathbf{\Theta}_{s}\mathbf{x}_i
+        + \mathbf{a}^{\top}_{t}\mathbf{\Theta}_{t}\mathbf{x}_k
+        \right)\right)}.
+$$</p>
+
+<p>$$
+        \alpha_{i,j} =
+        \frac{
+        \exp\left(\mathrm{LeakyReLU}\left(
+        \mathbf{a}^{\top}_{s} \mathbf{\Theta}_{s}\mathbf{x}_i
+        + \mathbf{a}^{\top}_{t} \mathbf{\Theta}_{t} \mathbf{x}_j
+        + \mathbf{a}^{\top}_{e} \mathbf{\Theta}_{e} \mathbf{e}_{i,j}
+        \right)\right)}
+        {\sum_{k \in \mathcal{N}(i) \cup \{ i \}}
+        \exp\left(\mathrm{LeakyReLU}\left(
+        \mathbf{a}^{\top}_{s} \mathbf{\Theta}_{s}\mathbf{x}_i
+        + \mathbf{a}^{\top}_{t} \mathbf{\Theta}_{t} \mathbf{x}_k
+        + \mathbf{a}^{\top}_{e} \mathbf{\Theta}_{e} \mathbf{e}_{i,k}
+        \right)\right)}.
+$$</p>
+
+<h3>Shapes:</h3>
+<ul>
+    <li><strong>Input:</strong><br>
+      Node features: \((|\mathcal{V}|, F_{in})\) or \((|\mathcal{V_s}|, F_{s}), (|\mathcal{V_t}|, F_{t})\) if bipartite,<br>
+      edge indices \((2, |\mathcal{E}|)\), edge features \((|\mathcal{E}|, D)\) *(optional)*</li>
+    <li><strong>Output:</strong> node features \((|\mathcal{V}|, H * F_{out})\) or \((|\mathcal{V}_t|, H * F_{out})\) if bipartite.<br>
+    If <code>return_attention_weights=True</code>, then \(((|\mathcal{V}|, H * F_{out}), ((2, |\mathcal{E}|), (|\mathcal{E}|, H)))\) or \(((|\mathcal{V_t}|, H * F_{out}), ((2, |\mathcal{E}|), (|\mathcal{E}|, H)))\) if bipartite.</li>
+</ul>
+
+<h2>Before Start...</h2>
+<hr>
+<ul>
+    <li>Check if all elements are stored in <code>cuda</code></li>
+    <li>Hyperparameters:
+        <ul>
+            <li><code>my_hidden_channels</code></li>
+            <li><code>my_heads</code></li>
+            <li><code>dropout</code></li>
+            <li><code>my_lr</code></li>
+            <li><code>epoch</code></li>
+        </ul>
+    </li>
+</ul>
+
+<h3>Set Head:</h3>
+<p><a href="https://petar-v.com/GAT/">Reference</a></p>
+<p>To stabilize the learning process of self-attention, we have found multi-head attention to be very beneficial (as was the case in <a href="https://arxiv.org/abs/1706.03762">Vaswani et al., 2017</a>). Namely, the operations of the layer are independently replicated K times (each replica with different parameters), and outputs are featurewise aggregated (typically by concatenating or adding).</p>
+
+<p>$$
+\vec{h^\prime_i} = \Vert^k_{k=1} \sigma \lgroup \sum_{j\in N_i}\alpha^k_{i,j} \mathrm{W}^k \vec{h_j}\rgroup
+$$</p>
+
+<p>where \(\alpha_{i,j}\) are the attention coefficients derived by the \(k\)-th replica, and \(W_k\) the weight matrix specifying the linear transformation of the \(k\)-th replica. With the setup of the preceding sections, this fully specifies a <strong>Graph Attention Network (GAT)</strong> layer!</p>
+
+<h3>Set Dropout:</h3>
+<p>Applying dropout (as in <a href="https://jmlr.org/papers/volume15/srivastava14a/srivastava14a.pdf">Srivastava et al., 2014</a>) to the attentional coefficients \(\alpha_{i,j}\) was a highly beneficial regularizer, especially for small training datasets.</p>
+
+<h2>K-Fold</h2>
+<p>The training data used in the model is split into \(k\) smaller sets, which are used to validate the model. The model is then trained on \(k-1\) folds of the training set, while the remaining fold is used as a validation set to evaluate the model.</p>
+
+<pre><code>
+    <span class="keyword">from</span> <span class="builtin">sklearn.tree</span> <span class="keyword">import</span> DecisionTreeClassifier
+    <span class="keyword">from</span> <span class="builtin">sklearn.model_selection</span> <span class="keyword">import</span> KFold, cross_val_score 
+    
+    <span class="comment"># Initialize classifier</span>
+    clf = DecisionTreeClassifier(random_state=<span class="number">42</span>)
+    <span class="comment"># Set up KFold cross-validation</span>
+    k_folds = KFold(n_splits=<span class="number">5</span>)
+    scores = cross_val_score(clf, X, y, cv=k_folds)
+    </code></pre>
+
+<p><strong>Assigning X and y:</strong></p>
+<ul>
+    <li>X (features): Typically, the \(x\) (node features) would be your input X. In this case, X = <code>data.x</code>, which represents the feature matrix for the nodes.</li>
+    <li>y (targets): The \(y\) here could refer to either:
+      <ul>
+          <li>y (downstream genes): These could be your target variables if you are predicting gene expression or similar outcomes.</li>
+          <li>labels (embedded cluster names): These could be your target labels if you are performing a clustering or classification task.</li>
+      </ul>
+    </li>
+</ul>
+
+<h3>Get R Square?</h3>
+<p><strong>Step 1:</strong></p>
+<ul>
+    <li>\(y_{\text{true}}\) is the vector of true values.</li>
+    <li>\(y_{\text{pred}}\) is the vector of predicted values.</li>
+</ul>
+
+<p><strong>Step 2: The R-squared value,  \(R^2\) , is calculated as:</strong></p>
+
+<p>$$
+R^2 = 1 - \frac{\sum_{i=1}^{n} \left( y_{\text{true}, i} - y_{\text{pred}, i} \right)^2}{\sum_{i=1}^{n} \left( y_{\text{true}, i} - \bar{y}_{\text{true}} \right)^2}
+$$</p>
+
+<p>$$
+    \bar{y}_{\text{true}} = \frac{1}{n} \sum_{i=1}^{n} y_{\text{true}, i}
+    $$</p>
+    
+<p><strong>Explanation</strong></p>
+<p>Residual Sum of Squares (RSS):  \(\sum_{i=1}^{n} \left( y_{\text{true}, i} - y_{\text{pred}, i} \right)^2\)</p>
+<p>Total Sum of Squares (TSS):  \(\sum_{i=1}^{n} \left( y_{\text{true}, i} - \bar{y}_{\text{true}} \right)^2\)</p>
